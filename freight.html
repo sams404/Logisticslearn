@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>GlobalFreight AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:  #0a0a0a;
+  --s1:  #111111;
+  --s2:  #191919;
+  --s3:  #222222;
+  --b:   #2a2a2a;
+  --b2:  #333333;
+  --bl:  #2563eb;
+  --bl2: #60a5fa;
+  --gn:  #16a34a;
+  --gn2: #4ade80;
+  --rd:  #dc2626;
+  --rd2: #f87171;
+  --am:  #d97706;
+  --am2: #fbbf24;
+  --tx:  #e5e5e5;
+  --tx2: #888888;
+  --tx3: #444444;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);font-size:14px;overflow:hidden}
+
+/* ── LAYOUT ── */
+#app{display:flex;height:100%;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:16px;padding:0 20px;height:50px;border-bottom:1px solid var(--b);background:var(--s1);flex-shrink:0;z-index:10}
+.logo{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--tx);letter-spacing:1px;white-space:nowrap}
+.logo span{color:var(--bl2)}
+.topbar-stats{display:flex;gap:16px;flex:1;overflow-x:auto;scrollbar-width:none}
+.topbar-stats::-webkit-scrollbar{display:none}
+.t-stat{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;white-space:nowrap;color:var(--tx2)}
+.t-stat b{color:var(--tx);font-weight:500}
+.t-dot{width:6px;height:6px;border-radius:50%;background:var(--gn);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.key-badge{margin-left:auto;font-family:var(--mono);font-size:10px;padding:4px 10px;border:1px solid var(--b2);color:var(--tx2);cursor:pointer;background:none;white-space:nowrap;transition:border-color .15s}
+.key-badge:hover{border-color:var(--bl2);color:var(--bl2)}
+
+.body{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:180px;border-right:1px solid var(--b);background:var(--s1);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;overflow-x:hidden}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;color:var(--tx2);font-size:13px;transition:all .1s;border-left:2px solid transparent;white-space:nowrap}
+.nav-item:hover{color:var(--tx);background:var(--s2)}
+.nav-item.active{color:var(--bl2);background:var(--s2);border-left-color:var(--bl2)}
+.nav-icon{font-size:15px;flex-shrink:0;width:18px;text-align:center}
+.nav-sep{height:1px;background:var(--b);margin:6px 0}
+.nav-label{font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:2px;padding:8px 16px 4px}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.page{display:none;padding:20px;min-height:100%}
+.page.active{display:block}
+
+/* ── COMPONENTS ── */
+.page-title{font-size:16px;font-weight:600;color:var(--tx);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.page-title span{font-family:var(--mono);font-size:10px;color:var(--tx3);font-weight:400;letter-spacing:1px}
+
+/* Grid layouts */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:900px){.grid-4{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.grid-4,.grid-2,.grid-3{grid-template-columns:1fr}.sidebar{width:48px}.nav-item span:last-child{display:none}.nav-label{display:none}}
+
+/* Card */
+.card{background:var(--s1);border:1px solid var(--b);padding:16px}
+.card-title{font-family:var(--mono);font-size:9px;color:var(--tx2);letter-spacing:2px;text-transform:uppercase;margin-bottom:10px}
+.card-val{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--tx);line-height:1}
+.card-sub{font-size:11px;color:var(--tx2);margin-top:6px}
+.card-val.green{color:var(--gn2)}
+.card-val.red{color:var(--rd2)}
+.card-val.blue{color:var(--bl2)}
+.card-val.amber{color:var(--am2)}
+
+/* Table */
+.tbl-wrap{background:var(--s1);border:1px solid var(--b);overflow:hidden;margin-bottom:20px}
+.tbl-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--b)}
+.tbl-head-title{font-family:var(--mono);font-size:10px;color:var(--tx2);letter-spacing:2px;text-transform:uppercase}
+table{width:100%;border-collapse:collapse}
+thead tr{border-bottom:1px solid var(--b)}
+th{padding:8px 14px;text-align:left;font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:1.5px;text-transform:uppercase;font-weight:500}
+td{padding:9px 14px;font-size:13px;color:var(--tx2);border-bottom:1px solid var(--s2)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--s2);color:var(--tx)}
+td b{color:var(--tx);font-weight:500}
+.empty-row td{text-align:center;color:var(--tx3);font-family:var(--mono);font-size:11px;padding:30px}
+
+/* Badge */
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:1px;padding:2px 7px;border-radius:2px}
+.badge-green{background:rgba(22,163,74,.15);color:var(--gn2);border:1px solid rgba(74,222,128,.2)}
+.badge-blue{background:rgba(37,99,235,.15);color:var(--bl2);border:1px solid rgba(96,165,250,.2)}
+.badge-red{background:rgba(220,38,38,.15);color:var(--rd2);border:1px solid rgba(248,113,113,.2)}
+.badge-amber{background:rgba(217,119,6,.15);color:var(--am2);border:1px solid rgba(251,191,36,.2)}
+.badge-gray{background:var(--s3);color:var(--tx2);border:1px solid var(--b)}
+
+/* Btn */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-family:var(--mono);font-size:11px;letter-spacing:1px;cursor:pointer;border:1px solid var(--b2);background:none;color:var(--tx2);transition:all .15s;white-space:nowrap}
+.btn:hover{border-color:var(--bl2);color:var(--bl2)}
+.btn-primary{background:var(--bl);border-color:var(--bl);color:#fff}
+.btn-primary:hover{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.btn-sm{padding:4px 10px;font-size:10px}
+.btn-green{border-color:var(--gn);color:var(--gn2)}
+.btn-green:hover{background:rgba(22,163,74,.15)}
+.btn-red{border-color:var(--rd);color:var(--rd2)}
+.btn-red:hover{background:rgba(220,38,38,.15)}
+
+/* Filters */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.filter-select{background:var(--s1);border:1px solid var(--b);color:var(--tx2);padding:6px 10px;font-family:var(--mono);font-size:11px;outline:none;cursor:pointer;transition:border-color .15s}
+.filter-select:focus{border-color:var(--bl2);color:var(--tx)}
+.filter-input{background:var(--s1);border:1px solid var(--b);color:var(--tx);padding:6px 10px;font-family:var(--mono);font-size:11px;outline:none;flex:1;min-width:160px;transition:border-color .15s}
+.filter-input:focus{border-color:var(--bl2)}
+.filter-input::placeholder{color:var(--tx3)}
+
+/* Form */
+.form-group{margin-bottom:14px}
+.form-label{font-family:var(--mono);font-size:9px;color:var(--tx2);letter-spacing:1.5px;margin-bottom:5px;display:block;text-transform:uppercase}
+.form-input,.form-select{width:100%;background:var(--s2);border:1px solid var(--b);color:var(--tx);padding:10px 12px;font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s;-webkit-appearance:none}
+.form-select{cursor:pointer;font-family:var(--mono);font-size:11px}
+.form-input:focus,.form-select:focus{border-color:var(--bl2)}
+.form-input::placeholder{color:var(--tx3)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--s1);border:1px solid var(--b2);width:100%;max-width:460px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--b)}
+.modal-title{font-family:var(--mono);font-size:12px;color:var(--tx);letter-spacing:1px;text-transform:uppercase}
+.modal-close{background:none;border:none;color:var(--tx3);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.modal-close:hover{color:var(--tx)}
+.modal-body{padding:18px}
+.modal-footer{padding:14px 18px;border-top:1px solid var(--b);display:flex;justify-content:flex-end;gap:8px}
+
+/* AI Chat */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 130px)}
+.chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.chat-msg{max-width:85%;padding:12px 14px;font-size:13px;line-height:1.6}
+.chat-msg.user{background:var(--s3);border:1px solid var(--b2);align-self:flex-end;color:var(--tx)}
+.chat-msg.ai{background:var(--s1);border:1px solid var(--b);align-self:flex-start;color:var(--tx2)}
+.chat-msg.ai b,.chat-msg.ai strong{color:var(--bl2)}
+.chat-msg.ai .ai-label{font-family:var(--mono);font-size:9px;color:var(--bl2);letter-spacing:2px;margin-bottom:6px}
+.chat-input-row{display:flex;gap:0;border-top:1px solid var(--b);background:var(--s1);flex-shrink:0}
+.chat-input{flex:1;background:var(--s2);border:none;border-right:1px solid var(--b);color:var(--tx);padding:12px 16px;font-family:var(--sans);font-size:13px;outline:none}
+.chat-input::placeholder{color:var(--tx3)}
+.chat-send{background:var(--bl);border:none;color:#fff;padding:12px 20px;font-family:var(--mono);font-size:11px;letter-spacing:1px;cursor:pointer;transition:background .15s;white-space:nowrap}
+.chat-send:hover{background:#1d4ed8}
+.chat-send:disabled{opacity:.4;cursor:default}
+.chat-suggestions{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--b);background:var(--bg)}
+.sug{font-family:var(--mono);font-size:9px;padding:4px 9px;border:1px solid var(--b2);color:var(--tx3);cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.sug:hover{border-color:var(--bl2);color:var(--bl2)}
+
+/* Learning */
+.lesson-card{background:var(--s1);border:1px solid var(--b);margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.lesson-card:hover{border-color:var(--b2)}
+.lesson-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+.lesson-title{font-size:14px;font-weight:500;color:var(--tx)}
+.lesson-body{display:none;padding:0 16px 16px;font-size:13px;color:var(--tx2);line-height:1.8;border-top:1px solid var(--b);padding-top:14px;white-space:pre-wrap}
+.lesson-card.open .lesson-body{display:block}
+.lesson-card.open{border-color:var(--bl)}
+
+.term-row{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--b)}
+.term-row:last-child{border:none}
+.term-word{font-family:var(--mono);font-size:12px;color:var(--bl2);font-weight:500;width:140px;flex-shrink:0}
+.term-def{font-size:13px;color:var(--tx2);line-height:1.5}
+.term-ex{font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:3px}
+
+/* Price compare */
+.price-meter{height:6px;background:var(--s3);margin:8px 0;position:relative}
+.price-meter-fill{height:100%;background:var(--bl2);transition:width .4s}
+.price-meter-fill.cheap{background:var(--gn2)}
+.price-meter-fill.expensive{background:var(--rd2)}
+.verdict{display:inline-block;font-family:var(--mono);font-size:14px;font-weight:500;padding:6px 14px;border:1px solid;margin-top:10px}
+.verdict.cheap{color:var(--gn2);border-color:var(--gn)}
+.verdict.normal{color:var(--bl2);border-color:var(--bl)}
+.verdict.expensive{color:var(--rd2);border-color:var(--rd)}
+
+/* Profit bar */
+.profit-bar-wrap{margin-top:12px}
+.p-row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.p-label{font-family:var(--mono);font-size:10px;color:var(--tx2);width:80px;flex-shrink:0}
+.p-bar{flex:1;height:4px;background:var(--s3)}
+.p-fill{height:100%;transition:width .4s}
+.p-val{font-family:var(--mono);font-size:11px;color:var(--tx2);width:70px;text-align:right}
+
+/* Search results */
+.search-result{background:var(--s1);border:1px solid var(--b);padding:14px 16px;margin-bottom:8px;transition:border-color .15s;cursor:pointer}
+.search-result:hover{border-color:var(--bl)}
+.sr-type{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--tx3);margin-bottom:4px;text-transform:uppercase}
+.sr-title{font-size:14px;color:var(--tx);font-weight:500;margin-bottom:4px}
+.sr-sub{font-size:12px;color:var(--tx2);line-height:1.5}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--b);margin-bottom:18px}
+.tab{padding:9px 16px;font-family:var(--mono);font-size:10px;letter-spacing:1.5px;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;text-transform:uppercase}
+.tab.active{color:var(--bl2);border-bottom-color:var(--bl2)}
+.tab:hover{color:var(--tx2)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* Setup screen */
+.setup-screen{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:24px;padding:30px}
+.setup-logo{font-family:var(--mono);font-size:28px;letter-spacing:3px;color:var(--tx)}
+.setup-logo span{color:var(--bl2)}
+.setup-sub{font-size:13px;color:var(--tx2);text-align:center;max-width:360px;line-height:1.6}
+.setup-box{width:100%;max-width:380px;background:var(--s1);border:1px solid var(--b);padding:24px}
+.setup-err{font-family:var(--mono);font-size:11px;color:var(--rd2);margin-top:8px;display:none}
+
+/* Misc */
+.divider{height:1px;background:var(--b);margin:18px 0}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--b2);border-top-color:var(--bl2);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tag{font-family:var(--mono);font-size:9px;padding:2px 6px;background:var(--s3);border:1px solid var(--b);color:var(--tx3);letter-spacing:.5px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-family:var(--mono);font-size:10px;color:var(--tx3);letter-spacing:2px;text-transform:uppercase}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="setup-screen" style="display:none">
+  <div class="setup-logo">GLOBAL<span>FREIGHT</span> AI</div>
+  <div class="setup-sub">Enter your Gemini API key to activate the AI engine.<br>Free at <span style="color:var(--bl2);font-family:var(--mono);font-size:12px">aistudio.google.com</span></div>
+  <div class="setup-box">
+    <div class="form-group">
+      <label class="form-label">GEMINI API KEY</label>
+      <input class="form-input" id="setup-key" type="text" placeholder="AIza..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <div class="setup-err" id="setup-err">Invalid key — check and try again</div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="activateKey()" id="setup-btn">ACTIVATE PLATFORM</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app" style="display:none;height:100%;flex-direction:column;display:none">
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">GF<span>AI</span></div>
+  <div class="topbar-stats">
+    <div class="t-stat"><div class="t-dot"></div> LIVE</div>
+    <div class="t-stat">LOADS <b id="stat-loads">0</b></div>
+    <div class="t-stat">CARRIERS <b id="stat-carriers">0</b></div>
+    <div class="t-stat">DEALS <b id="stat-deals">0</b></div>
+    <div class="t-stat">PROFIT <b id="stat-profit" style="color:var(--gn2)">€0</b></div>
+  </div>
+  <button class="key-badge" onclick="showKeyModal()">⚙ API KEY</button>
+</div>
+
+<div class="body">
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div style="height:8px"></div>
+  <div class="nav-label">PLATFORM</div>
+  <div class="nav-item active" onclick="nav('dashboard',this)"><span class="nav-icon">▦</span><span>Dashboard</span></div>
+  <div class="nav-item" onclick="nav('marketplace',this)"><span class="nav-icon">◈</span><span>Marketplace</span></div>
+  <div class="nav-sep"></div>
+  <div class="nav-label">AI TOOLS</div>
+  <div class="nav-item" onclick="nav('ai',this)"><span class="nav-icon">◎</span><span>AI Agent</span></div>
+  <div class="nav-item" onclick="nav('price',this)"><span class="nav-icon">◑</span><span>Price AI</span></div>
+  <div class="nav-item" onclick="nav('search',this)"><span class="nav-icon">◫</span><span>AI Search</span></div>
+  <div class="nav-sep"></div>
+  <div class="nav-label">BROKER</div>
+  <div class="nav-item" onclick="nav('broker',this)"><span class="nav-icon">◧</span><span>Broker Tools</span></div>
+  <div class="nav-item" onclick="nav('learning',this)"><span class="nav-icon">◱</span><span>Learning</span></div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-title">Dashboard <span>OVERVIEW</span></div>
+  <div class="grid-4" id="dash-stats"></div>
+  <div class="grid-2">
+    <div>
+      <div class="section-header"><div class="section-title">Recent Deals</div></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Route</th><th>Client</th><th>Carrier</th><th>Profit</th><th>Type</th></tr></thead>
+        <tbody id="dash-deals"></tbody></table>
+      </div>
+    </div>
+    <div>
+      <div class="section-header"><div class="section-title">Top Loads</div></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>From</th><th>To</th><th>Type</th><th>Price</th></tr></thead>
+        <tbody id="dash-loads"></tbody></table>
+      </div>
+    </div>
+  </div>
+  <div class="grid-3" id="dash-carriers-wrap">
+    <div class="card">
+      <div class="card-title">Total Profit</div>
+      <div class="card-val green" id="dash-total-profit">€0</div>
+      <div class="card-sub">All closed deals</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg Margin</div>
+      <div class="card-val blue" id="dash-avg-margin">0%</div>
+      <div class="card-sub">Client - Carrier / Client</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Best Route</div>
+      <div class="card-val" id="dash-best-route" style="font-size:14px;line-height:1.4">—</div>
+      <div class="card-sub">Highest profit deal</div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETPLACE -->
+<div class="page" id="page-marketplace">
+  <div class="page-title">Marketplace <span>LOADS &amp; CARRIERS</span></div>
+  <div class="tabs">
+    <div class="tab active" onclick="mktTab('loads',this)">Loads</div>
+    <div class="tab" onclick="mktTab('carriers',this)">Carriers</div>
+    <div class="tab" onclick="mktTab('deals',this)">Deals</div>
+  </div>
+
+  <!-- LOADS TAB -->
+  <div class="tab-content active" id="mkt-loads">
+    <div class="filters">
+      <input class="filter-input" placeholder="Search country, type..." id="load-search" oninput="renderLoads()" style="max-width:220px">
+      <select class="filter-select" id="load-type" onchange="renderLoads()">
+        <option value="">All Types</option>
+        <option>truck</option><option>ship</option><option>plane</option><option>train</option>
+      </select>
+      <select class="filter-select" id="load-sort" onchange="renderLoads()">
+        <option value="date">Sort: Date</option>
+        <option value="price-asc">Price ↑</option>
+        <option value="price-desc">Price ↓</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-load')">+ Add Load</button>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>#</th><th>From</th><th>To</th><th>Type</th><th>Weight</th><th>Price</th><th>Date</th><th>Action</th></tr></thead>
+      <tbody id="loads-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- CARRIERS TAB -->
+  <div class="tab-content" id="mkt-carriers">
+    <div class="filters">
+      <input class="filter-input" placeholder="Search name, country..." id="carrier-search" oninput="renderCarriers()" style="max-width:220px">
+      <select class="filter-select" id="carrier-type" onchange="renderCarriers()">
+        <option value="">All Types</option>
+        <option>truck</option><option>ship</option><option>plane</option><option>train</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-carrier')">+ Add Carrier</button>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>#</th><th>Name</th><th>Country</th><th>Type</th><th>€/km</th><th>Action</th></tr></thead>
+      <tbody id="carriers-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- DEALS TAB -->
+  <div class="tab-content" id="mkt-deals">
+    <div class="filters">
+      <button class="btn btn-primary btn-sm" onclick="openModal('modal-create-deal')">+ Create Deal</button>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>#</th><th>Load</th><th>Carrier</th><th>Client €</th><th>Carrier €</th><th>Profit</th><th>Margin</th><th>Action</th></tr></thead>
+      <tbody id="deals-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- AI AGENT -->
+<div class="page" id="page-ai">
+  <div class="page-title">AI Agent <span>GEMINI-POWERED</span></div>
+  <div class="chat-wrap">
+    <div class="chat-suggestions" id="chat-suggestions">
+      <div class="sug" onclick="sendSug(this)">find cargo Norway → Poland</div>
+      <div class="sug" onclick="sendSug(this)">find cheap truck carrier</div>
+      <div class="sug" onclick="sendSug(this)">calculate profit 1400 1100</div>
+      <div class="sug" onclick="sendSug(this)">best route Oslo to Shanghai</div>
+      <div class="sug" onclick="sendSug(this)">what documents for truck EU</div>
+      <div class="sug" onclick="sendSug(this)">suggest price Oslo Warsaw 18t</div>
+    </div>
+    <div class="chat-msgs" id="chat-msgs"></div>
+    <div class="chat-input-row">
+      <input class="chat-input" id="chat-input" placeholder="Ask about loads, routes, prices, documents..." onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send" id="chat-send-btn" onclick="sendChat()">SEND</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRICE AI -->
+<div class="page" id="page-price">
+  <div class="page-title">Price AI <span>COMPARE &amp; ANALYSE</span></div>
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">Input Prices</div>
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label">Client Price (€)</label>
+          <input class="form-input" id="pc-client" type="number" placeholder="1400" oninput="calcPriceCompare()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Carrier Price (€)</label>
+          <input class="form-input" id="pc-carrier" type="number" placeholder="1100" oninput="calcPriceCompare()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Route (optional)</label>
+          <input class="form-input" id="pc-route" type="text" placeholder="Oslo → Warsaw, 1200km">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Transport Type</label>
+          <select class="form-select" id="pc-type" onchange="calcPriceCompare()">
+            <option>truck</option><option>ship</option><option>plane</option><option>train</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="aiPriceAnalysis()">AI FULL ANALYSIS</button>
+      </div>
+    </div>
+    <div>
+      <div class="card" id="price-result">
+        <div class="card-title">Analysis</div>
+        <div style="color:var(--tx3);font-family:var(--mono);font-size:11px;padding:20px 0;text-align:center">Enter prices to see analysis</div>
+      </div>
+    </div>
+  </div>
+  <div id="ai-price-result" style="margin-top:0"></div>
+</div>
+
+<!-- AI SEARCH -->
+<div class="page" id="page-search">
+  <div class="page-title">AI Search <span>ACROSS ALL DATA</span></div>
+  <div class="filters" style="margin-bottom:20px">
+    <input class="filter-input" id="search-input" placeholder="find cheap truck load, what is CMR, best route, calculate profit..." onkeydown="if(event.key==='Enter')aiSearch()" style="flex:1">
+    <button class="btn btn-primary" onclick="aiSearch()">SEARCH</button>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+    <span class="sug" onclick="quickSearch('find cheap truck loads')">cheap truck loads</span>
+    <span class="sug" onclick="quickSearch('find ship carriers')">ship carriers</span>
+    <span class="sug" onclick="quickSearch('what is CMR')">what is CMR</span>
+    <span class="sug" onclick="quickSearch('how to become freight broker')">become broker</span>
+    <span class="sug" onclick="quickSearch('most profitable deals')">best deals</span>
+    <span class="sug" onclick="quickSearch('how to ship by sea')">ship by sea</span>
+  </div>
+  <div id="search-results"></div>
+</div>
+
+<!-- BROKER TOOLS -->
+<div class="page" id="page-broker">
+  <div class="page-title">Broker Tools <span>CALCULATORS</span></div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Profit Calculator</div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">Client Price (€)</label>
+        <input class="form-input" id="bc-client" type="number" placeholder="1400" oninput="calcBroker()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Carrier Price (€)</label>
+        <input class="form-input" id="bc-carrier" type="number" placeholder="1100" oninput="calcBroker()">
+      </div>
+      <div id="broker-result" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Commission Calculator</div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">Deal Value (€)</label>
+        <input class="form-input" id="comm-deal" type="number" placeholder="5000" oninput="calcComm()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Commission %</label>
+        <input class="form-input" id="comm-pct" type="number" placeholder="15" value="15" oninput="calcComm()">
+      </div>
+      <div id="comm-result" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Route Cost Calculator</div>
+      <div class="form-group" style="margin-top:10px">
+        <label class="form-label">Distance (km)</label>
+        <input class="form-input" id="route-km" type="number" placeholder="1200" oninput="calcRoute()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Rate (€/km)</label>
+        <input class="form-input" id="route-rate" type="number" placeholder="2.5" step="0.1" oninput="calcRoute()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight (tonnes)</label>
+        <input class="form-input" id="route-weight" type="number" placeholder="18" oninput="calcRoute()">
+      </div>
+      <div id="route-result" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Performance table -->
+  <div class="section-header"><div class="section-title">Deal Performance</div></div>
+  <div class="tbl-wrap">
+    <table><thead><tr><th>#</th><th>Route</th><th>Type</th><th>Client €</th><th>Carrier €</th><th>Profit</th><th>Margin</th><th>Status</th></tr></thead>
+    <tbody id="broker-deals-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- LEARNING -->
+<div class="page" id="page-learning">
+  <div class="page-title">Learning <span>LOGISTICS EDUCATION</span></div>
+  <div class="tabs">
+    <div class="tab active" onclick="learnTab('lessons',this)">Lessons</div>
+    <div class="tab" onclick="learnTab('terms',this)">Terms</div>
+    <div class="tab" onclick="learnTab('docs',this)">Documents</div>
+    <div class="tab" onclick="learnTab('guide',this)">Broker Guide</div>
+  </div>
+  <div class="tab-content active" id="learn-lessons">
+    <div id="lessons-list"></div>
+  </div>
+  <div class="tab-content" id="learn-terms">
+    <div class="filters">
+      <input class="filter-input" placeholder="Search terms..." id="terms-search" oninput="renderTerms(this.value)" style="max-width:300px">
+    </div>
+    <div id="terms-list"></div>
+  </div>
+  <div class="tab-content" id="learn-docs">
+    <div id="docs-content"></div>
+  </div>
+  <div class="tab-content" id="learn-guide">
+    <div id="guide-content"></div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /body -->
+</div><!-- /main-app -->
+
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-load">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Add Load</span><button class="modal-close" onclick="closeModal('modal-add-load')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">From Country</label><input class="form-input" id="al-from" placeholder="Norway"></div>
+        <div class="form-group"><label class="form-label">To Country</label><input class="form-input" id="al-to" placeholder="Poland"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Price (€)</label><input class="form-input" id="al-price" type="number" placeholder="1200"></div>
+        <div class="form-group"><label class="form-label">Weight (kg)</label><input class="form-input" id="al-weight" type="number" placeholder="18000"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Transport Type</label>
+          <select class="form-select" id="al-type"><option>truck</option><option>ship</option><option>plane</option><option>train</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="al-date" type="date"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-add-load')">Cancel</button>
+      <button class="btn btn-primary" onclick="addLoad()">Add Load</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-carrier">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Add Carrier</span><button class="modal-close" onclick="closeModal('modal-add-carrier')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Company Name</label><input class="form-input" id="ac-name" placeholder="NorTrans AS"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Country</label><input class="form-input" id="ac-country" placeholder="Norway"></div>
+        <div class="form-group"><label class="form-label">Transport Type</label>
+          <select class="form-select" id="ac-type"><option>truck</option><option>ship</option><option>plane</option><option>train</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Price per km (€)</label><input class="form-input" id="ac-price" type="number" placeholder="2.5" step="0.1"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-add-carrier')">Cancel</button>
+      <button class="btn btn-primary" onclick="addCarrier()">Add Carrier</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-create-deal">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Create Deal</span><button class="modal-close" onclick="closeModal('modal-create-deal')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Select Load</label>
+        <select class="form-select" id="cd-load"></select>
+      </div>
+      <div class="form-group"><label class="form-label">Select Carrier</label>
+        <select class="form-select" id="cd-carrier"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Client Price (€)</label><input class="form-input" id="cd-client" type="number" oninput="previewProfit()"></div>
+        <div class="form-group"><label class="form-label">Carrier Price (€)</label><input class="form-input" id="cd-carrier-price" type="number" oninput="previewProfit()"></div>
+      </div>
+      <div id="deal-preview" style="margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-create-deal')">Cancel</button>
+      <button class="btn btn-primary" onclick="createDeal()">Create Deal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-api-key">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-title">Update API Key</span><button class="modal-close" onclick="closeModal('modal-api-key')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Gemini API Key</label><input class="form-input" id="update-key" type="password" placeholder="AIza..."></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-api-key')">Cancel</button>
+      <button class="btn btn-primary" onclick="updateKey()">Save Key</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// DATABASE
+// ════════════════════════════════════════════════════════
+const SEED_LOADS = [
+  {id:1,from_country:'Norway',to_country:'Poland',price:1350,weight:18000,transport_type:'truck',date:'2026-03-20'},
+  {id:2,from_country:'China',to_country:'Norway',price:4200,weight:15000,transport_type:'ship',date:'2026-04-01'},
+  {id:3,from_country:'Germany',to_country:'UK',price:950,weight:5000,transport_type:'truck',date:'2026-03-18'},
+  {id:4,from_country:'Turkey',to_country:'Norway',price:2100,weight:12000,transport_type:'truck',date:'2026-03-25'},
+  {id:5,from_country:'USA',to_country:'Germany',price:5500,weight:8000,transport_type:'plane',date:'2026-03-19'},
+  {id:6,from_country:'Norway',to_country:'UK',price:1800,weight:20000,transport_type:'ship',date:'2026-04-05'},
+  {id:7,from_country:'Sweden',to_country:'Spain',price:1600,weight:14000,transport_type:'truck',date:'2026-03-22'},
+  {id:8,from_country:'China',to_country:'Germany',price:3800,weight:22000,transport_type:'train',date:'2026-04-10'},
+];
+const SEED_CARRIERS = [
+  {id:1,name:'NorTrans AS',country:'Norway',transport_type:'truck',price_per_km:2.8},
+  {id:2,name:'Baltic Shipping Line',country:'Latvia',transport_type:'ship',price_per_km:0.8},
+  {id:3,name:'EuroAir Cargo GmbH',country:'Germany',transport_type:'plane',price_per_km:8.5},
+  {id:4,name:'TransPol Logistics',country:'Poland',transport_type:'truck',price_per_km:2.1},
+  {id:5,name:'ScanRail Freight',country:'Sweden',transport_type:'train',price_per_km:1.5},
+  {id:6,name:'MedShip Co',country:'Greece',transport_type:'ship',price_per_km:0.9},
+  {id:7,name:'AlphaFreight GmbH',country:'Germany',transport_type:'truck',price_per_km:2.4},
+  {id:8,name:'Nordic Air Cargo',country:'Norway',transport_type:'plane',price_per_km:7.8},
+];
+const SEED_DEALS = [
+  {id:1,load_id:1,carrier_id:4,client_price:1350,carrier_price:1050,profit:300},
+  {id:2,load_id:2,carrier_id:2,client_price:4200,carrier_price:3600,profit:600},
+  {id:3,load_id:3,carrier_id:4,client_price:950,carrier_price:720,profit:230},
+  {id:4,load_id:5,carrier_id:3,client_price:5500,carrier_price:4800,profit:700},
+];
+const TERMS = [
+  {word:'CMR',meaning:'Convention on the Contract for International Carriage of Goods by Road. Standard waybill for all European truck shipments.',example:'CMR required for all EU cross-border truck transport'},
+  {word:'Bill of Lading',meaning:'Ocean transport document. Functions as: contract of carriage, receipt, and title document. Issued by shipping line.',example:'Ocean B/L: Maersk Line, shipment from Shanghai to Oslo'},
+  {word:'AWB',meaning:'Air Waybill — non-negotiable air transport document. MAWB from airline to forwarder, HAWB from forwarder to shipper.',example:'KLM Cargo AWB 074-12345678'},
+  {word:'Incoterms 2020',meaning:'ICC International Commercial Terms — 11 rules defining responsibilities of buyers and sellers in international trade.',example:'DDP Oslo, Incoterms® 2020 — seller pays all costs to destination'},
+  {word:'FOB',meaning:'Free On Board — seller loads goods onto vessel. Risk transfers at port of loading.',example:'FOB Shanghai — buyer pays ocean freight from China'},
+  {word:'CIF',meaning:'Cost, Insurance, Freight — seller pays freight and minimum insurance to destination port. Risk transfers at loading.',example:'CIF Oslo — seller pays freight to Norway'},
+  {word:'DDP',meaning:'Delivered Duty Paid — maximum seller obligation. Seller delivers goods, clears customs, pays all duties.',example:'DDP Oslo warehouse — seller handles Norwegian customs'},
+  {word:'EXW',meaning:'Ex Works — minimum seller obligation. Buyer collects goods from seller warehouse.',example:'EXW Hamburg factory — buyer arranges all transport'},
+  {word:'FCL',meaning:'Full Container Load — shipper uses entire container.',example:'1×40ft FCL from Shanghai to Oslo = 2 TEU'},
+  {word:'LCL',meaning:'Less than Container Load — cargo consolidated with other shippers.',example:'LCL 8 CBM from Hamburg to Oslo'},
+  {word:'FTL',meaning:'Full Truck Load — full truck capacity, one shipper.',example:'FTL 24t / 82 CBM Oslo to Warsaw'},
+  {word:'LTL',meaning:'Less than Truck Load — partial truck, shared with other cargo.',example:'LTL 5 pallets consolidated with other freight'},
+  {word:'TEU',meaning:'Twenty-foot Equivalent Unit — container capacity measurement.',example:'20ft = 1 TEU; 40ft = 2 TEU'},
+  {word:'Freight Broker',meaning:'Intermediary between shipper (client) and carrier. Earns profit = client price minus carrier price.',example:'Broker: client pays €1400, carrier gets €1100, profit = €300'},
+  {word:'TVINN',meaning:'Norwegian electronic customs declaration system for import and export.',example:'All imports to Norway require TVINN declaration'},
+  {word:'VOEC',meaning:'VAT On E-Commerce — simplified VAT registration for foreign e-commerce sellers in Norway.',example:'Sales to Norway over 50,000 NOK/year → VOEC registration'},
+  {word:'Tollvesenet',meaning:'Norwegian Customs Authority — controls all imports and exports, collects duties.',example:'toll.no — official Norwegian customs portal'},
+  {word:'CIM',meaning:'Convention on International Carriage of Goods by Rail. Standard rail transport document.',example:'CIM waybill used for China–Europe rail shipments'},
+];
+const LESSONS = [
+  {id:1,title:'What is a Freight Broker?',level:'beginner',text:`A freight broker acts as intermediary between the shipper (client with cargo) and the carrier (transport company).
+
+How it works:
+1. Client has cargo to ship
+2. Broker finds a carrier
+3. Client pays broker: €1,400
+4. Broker pays carrier: €1,100
+5. Broker profit: €300
+
+Why clients use brokers:
+— Don't want to search for carriers themselves
+— Broker has established relationships
+— Broker handles negotiations and paperwork
+
+Key rule: The broker is responsible to the client, even if the carrier fails.`},
+  {id:2,title:'How to Calculate Broker Profit',level:'beginner',text:`The core formula:
+
+  Profit = Client Price − Carrier Price
+  Margin = Profit ÷ Client Price × 100
+
+Example:
+  Client pays:  €1,400
+  Carrier gets: €1,050
+  Profit:       €350  (25% margin)
+
+Typical broker margins:
+  Entry level:  8–12%
+  Experienced:  15–25%
+  Expert:       25%+
+
+Always check:
+— Market rate for the route
+— Fuel surcharges (BAF for sea, FSC for air)
+— Insurance costs
+— Payment terms (carrier may want fast pay)`},
+  {id:3,title:'Incoterms 2020 — All 11 Rules',level:'intermediate',text:`ICC Incoterms 2020 — defines who pays for what in international trade.
+
+Any mode of transport:
+  EXW  — Ex Works (minimum seller)
+  FCA  — Free Carrier
+  CPT  — Carriage Paid To
+  CIP  — Carriage and Insurance Paid
+  DAP  — Delivered At Place
+  DPU  — Delivered at Place Unloaded
+  DDP  — Delivered Duty Paid (maximum seller)
+
+Sea/inland waterway only:
+  FAS  — Free Alongside Ship
+  FOB  — Free On Board
+  CFR  — Cost and Freight
+  CIF  — Cost, Insurance and Freight
+
+Key change in 2020:
+  DPU replaced DAT
+  FCA allows on-board B/L
+  CIP requires ICC-A insurance`},
+  {id:4,title:'Key Logistics Documents',level:'intermediate',text:`Road transport:
+  CMR — International road waybill (mandatory EU)
+  TIR — Transit document for non-EU countries
+
+Sea transport:
+  Bill of Lading (B/L) — title document, issued by shipping line
+  Sea Waybill — non-negotiable, faster release
+
+Air transport:
+  AWB (Air Waybill) — always non-negotiable
+  MAWB — airline to forwarder
+  HAWB — forwarder to shipper
+
+Rail:
+  CIM — International rail consignment note
+
+All shipments need:
+  Commercial Invoice
+  Packing List
+  Certificate of Origin (if preferential tariff needed)
+  EUR.1 (for EEA preferential origin)
+
+Norway specifically:
+  TVINN — customs declaration system
+  MVA — Norwegian VAT (25% standard)`},
+  {id:5,title:'Finding Loads — Where to Look',level:'advanced',text:`Freight exchanges (Europe):
+  TimoCom — largest EU load board
+  CargoX — digital freight platform
+  Transporeon — shipper-to-carrier platform
+  Teleroute — European freight exchange
+  load24 — Norway/Scandinavia focused
+
+Direct outreach:
+  Manufacturers in your region
+  Distributors and wholesalers
+  Import/export companies
+  Cold storage and food producers
+
+Digital:
+  LinkedIn — B2B freight contacts
+  Telegram groups — active logistics communities
+  Industry associations (NHO Logistikk og Transport)
+
+Norway-specific:
+  Norwegian shippers use Bring, PostNord, DB Schenker
+  Many Norwegian exporters: seafood, oil equipment
+  Key port: Oslo, Bergen, Stavanger`},
+];
+const DOCS_DATA = [
+  {name:'CMR Waybill',transport:'truck',desc:'Mandatory for all international road freight in Europe. Issued by carrier. Covers contract of carriage, delivery receipt, and limited carrier liability (8.33 SDR/kg).'},
+  {name:'Bill of Lading',transport:'ship',desc:'Most important ocean document. 3 functions: contract of carriage, receipt of goods, document of title. Can be negotiable (original) or straight (non-negotiable). Issued by shipping line.'},
+  {name:'Air Waybill (AWB)',transport:'plane',desc:'Non-negotiable air transport document. MAWB issued by airline to forwarder. HAWB issued by forwarder to shipper. Weight-based charges (chargeable weight = max of actual vs volumetric).'},
+  {name:'CIM',transport:'train',desc:'International rail consignment note under COTIF convention. Covers rail freight across participating countries including China–Europe rail routes.'},
+  {name:'Commercial Invoice',transport:'all',desc:'Required for all international shipments. Must include: seller/buyer details, HS code, description, quantity, unit price, total value, Incoterms, country of origin.'},
+  {name:'Packing List',transport:'all',desc:'Detailed list of shipment contents. Includes boxes, pallets, dimensions, weights per package. Required for customs clearance worldwide.'},
+  {name:'Certificate of Origin',transport:'all',desc:'Declares country where goods were manufactured. Required for preferential customs tariffs. EUR.1 used for EEA. Form A for developing countries.'},
+  {name:'TVINN Declaration',transport:'norway',desc:'Norwegian electronic customs system for all imports and exports. Required for all commercial shipments entering Norway. Submitted by customs broker (tollagent).'},
+];
+
+let DB = {loads:[],carriers:[],deals:[],geminiKey:''};
+let nextId = {load:100,carrier:100,deal:100};
+
+function saveDB(){
+  try{
+    localStorage.setItem('gf2_db',JSON.stringify({loads:DB.loads,carriers:DB.carriers,deals:DB.deals,nextId}));
+    if(DB.geminiKey) localStorage.setItem('gf2_key',DB.geminiKey);
+  }catch(e){}
+}
+function loadDB(){
+  try{
+    const d=JSON.parse(localStorage.getItem('gf2_db')||'{}');
+    if(d.loads&&d.loads.length){DB.loads=d.loads;DB.carriers=d.carriers;DB.deals=d.deals;nextId=d.nextId||nextId;}
+    else{DB.loads=[...SEED_LOADS];DB.carriers=[...SEED_CARRIERS];DB.deals=[...SEED_DEALS];}
+  }catch(e){DB.loads=[...SEED_LOADS];DB.carriers=[...SEED_CARRIERS];DB.deals=[...SEED_DEALS];}
+  DB.geminiKey=localStorage.getItem('gf2_key')||localStorage.getItem('lc2_key')||'';
+}
+
+// ════════════════════════════════════════════════════════
+// GEMINI AI
+// ════════════════════════════════════════════════════════
+async function gemini(prompt,retries=2){
+  const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${DB.geminiKey}`;
+  for(let i=0;i<=retries;i++){
+    try{
+      const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:700,temperature:0.7}})});
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message);
+      return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    }catch(e){if(i===retries)throw e;await new Promise(r=>setTimeout(r,600));}
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════
+function nav(page,el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  if(el)el.classList.add('active');
+  document.getElementById('page-'+page).classList.add('active');
+  if(page==='dashboard')renderDashboard();
+  if(page==='marketplace')renderMarketplace();
+  if(page==='broker')renderBroker();
+  if(page==='learning')renderLearning();
+  updateTopbarStats();
+}
+
+function mktTab(tab,el){
+  document.querySelectorAll('#page-marketplace .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-marketplace .tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('mkt-'+tab).classList.add('active');
+  if(tab==='loads')renderLoads();
+  if(tab==='carriers')renderCarriers();
+  if(tab==='deals')renderDealsTable();
+}
+
+function learnTab(tab,el){
+  document.querySelectorAll('#page-learning .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-learning .tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('learn-'+tab).classList.add('active');
+  if(tab==='lessons')renderLessons();
+  if(tab==='terms')renderTerms('');
+  if(tab==='docs')renderDocs();
+  if(tab==='guide')renderGuide();
+}
+
+// ════════════════════════════════════════════════════════
+// SETUP / KEY
+// ════════════════════════════════════════════════════════
+async function activateKey(){
+  const k=document.getElementById('setup-key').value.trim();
+  const btn=document.getElementById('setup-btn');
+  const err=document.getElementById('setup-err');
+  if(!k||k.length<20){err.textContent='Key too short.';err.style.display='block';return;}
+  btn.textContent='CHECKING...';btn.disabled=true;err.style.display='none';
+  try{
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`;
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{role:'user',parts:[{text:'Hi'}]}],generationConfig:{maxOutputTokens:5}})});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error.message);
+    DB.geminiKey=k;saveDB();
+    document.getElementById('setup-screen').style.display='none';
+    document.getElementById('main-app').style.display='flex';
+    initApp();
+  }catch(e){
+    err.textContent='Invalid key: '+e.message.slice(0,60);
+    err.style.display='block';
+    btn.textContent='ACTIVATE PLATFORM';btn.disabled=false;
+  }
+}
+function showKeyModal(){openModal('modal-api-key');document.getElementById('update-key').value='';}
+async function updateKey(){
+  const k=document.getElementById('update-key').value.trim();
+  if(!k||k.length<20){alert('Key too short');return;}
+  DB.geminiKey=k;saveDB();closeModal('modal-api-key');
+  showToast('API key updated');
+}
+
+// ════════════════════════════════════════════════════════
+// MODALS
+// ════════════════════════════════════════════════════════
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if(id==='modal-create-deal'){
+    const ls=document.getElementById('cd-load');
+    const cs=document.getElementById('cd-carrier');
+    ls.innerHTML=DB.loads.map(l=>`<option value="${l.id}">${l.from_country} → ${l.to_country} (€${l.price})</option>`).join('');
+    cs.innerHTML=DB.carriers.map(c=>`<option value="${c.id}">${c.name} — ${c.transport_type}</option>`).join('');
+    const load=DB.loads[0];
+    if(load){document.getElementById('cd-client').value=load.price;}
+  }
+  if(id==='modal-add-load'){
+    document.getElementById('al-date').value=new Date().toISOString().split('T')[0];
+  }
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});
+});
+
+// ════════════════════════════════════════════════════════
+// LOADS
+// ════════════════════════════════════════════════════════
+function renderLoads(){
+  const search=(document.getElementById('load-search')?.value||'').toLowerCase();
+  const type=document.getElementById('load-type')?.value||'';
+  const sort=document.getElementById('load-sort')?.value||'date';
+  let loads=[...DB.loads];
+  if(search)loads=loads.filter(l=>l.from_country.toLowerCase().includes(search)||l.to_country.toLowerCase().includes(search));
+  if(type)loads=loads.filter(l=>l.transport_type===type);
+  if(sort==='price-asc')loads.sort((a,b)=>a.price-b.price);
+  else if(sort==='price-desc')loads.sort((a,b)=>b.price-a.price);
+  const tbody=document.getElementById('loads-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=loads.length?loads.map(l=>`
+    <tr>
+      <td><span class="tag">#${l.id}</span></td>
+      <td><b>${l.from_country}</b></td><td><b>${l.to_country}</b></td>
+      <td><span class="badge ${typeBadge(l.transport_type)}">${l.transport_type}</span></td>
+      <td>${(l.weight/1000).toFixed(1)}t</td>
+      <td><b>€${l.price.toLocaleString()}</b></td>
+      <td>${l.date}</td>
+      <td><button class="btn btn-sm btn-green" onclick="quickDeal(${l.id})">Deal</button>
+          <button class="btn btn-sm btn-red" onclick="deleteLoad(${l.id})" style="margin-left:4px">✕</button></td>
+    </tr>`).join('')
+    :'<tr class="empty-row"><td colspan="8">No loads found — add one</td></tr>';
+}
+
+function addLoad(){
+  const from=document.getElementById('al-from').value.trim();
+  const to=document.getElementById('al-to').value.trim();
+  const price=parseFloat(document.getElementById('al-price').value)||0;
+  const weight=parseFloat(document.getElementById('al-weight').value)||0;
+  const type=document.getElementById('al-type').value;
+  const date=document.getElementById('al-date').value;
+  if(!from||!to||!price){showToast('Fill required fields');return;}
+  const id=++nextId.load;
+  DB.loads.unshift({id,from_country:from,to_country:to,price,weight,transport_type:type,date});
+  saveDB();closeModal('modal-add-load');renderLoads();updateTopbarStats();
+  document.getElementById('al-from').value='';document.getElementById('al-to').value='';
+  document.getElementById('al-price').value='';document.getElementById('al-weight').value='';
+  showToast('Load added');
+}
+
+function deleteLoad(id){
+  DB.loads=DB.loads.filter(l=>l.id!==id);saveDB();renderLoads();updateTopbarStats();showToast('Load removed');
+}
+
+function quickDeal(loadId){
+  openModal('modal-create-deal');
+  const ls=document.getElementById('cd-load');
+  for(let o of ls.options){if(parseInt(o.value)===loadId){ls.value=String(loadId);break;}}
+  const load=DB.loads.find(l=>l.id===loadId);
+  if(load)document.getElementById('cd-client').value=load.price;
+}
+
+// ════════════════════════════════════════════════════════
+// CARRIERS
+// ════════════════════════════════════════════════════════
+function renderCarriers(){
+  const search=(document.getElementById('carrier-search')?.value||'').toLowerCase();
+  const type=document.getElementById('carrier-type')?.value||'';
+  let carriers=[...DB.carriers];
+  if(search)carriers=carriers.filter(c=>c.name.toLowerCase().includes(search)||c.country.toLowerCase().includes(search));
+  if(type)carriers=carriers.filter(c=>c.transport_type===type);
+  const tbody=document.getElementById('carriers-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=carriers.length?carriers.map(c=>`
+    <tr>
+      <td><span class="tag">#${c.id}</span></td>
+      <td><b>${c.name}</b></td><td>${c.country}</td>
+      <td><span class="badge ${typeBadge(c.transport_type)}">${c.transport_type}</span></td>
+      <td><b>€${c.price_per_km}</b></td>
+      <td><button class="btn btn-sm btn-red" onclick="deleteCarrier(${c.id})">✕</button></td>
+    </tr>`).join('')
+    :'<tr class="empty-row"><td colspan="6">No carriers found — add one</td></tr>';
+}
+
+function addCarrier(){
+  const name=document.getElementById('ac-name').value.trim();
+  const country=document.getElementById('ac-country').value.trim();
+  const type=document.getElementById('ac-type').value;
+  const price=parseFloat(document.getElementById('ac-price').value)||0;
+  if(!name||!country||!price){showToast('Fill required fields');return;}
+  const id=++nextId.carrier;
+  DB.carriers.push({id,name,country,transport_type:type,price_per_km:price});
+  saveDB();closeModal('modal-add-carrier');renderCarriers();updateTopbarStats();
+  document.getElementById('ac-name').value='';document.getElementById('ac-country').value='';document.getElementById('ac-price').value='';
+  showToast('Carrier added');
+}
+
+function deleteCarrier(id){
+  DB.carriers=DB.carriers.filter(c=>c.id!==id);saveDB();renderCarriers();updateTopbarStats();showToast('Carrier removed');
+}
+
+// ════════════════════════════════════════════════════════
+// DEALS
+// ════════════════════════════════════════════════════════
+function previewProfit(){
+  const cp=parseFloat(document.getElementById('cd-client').value)||0;
+  const kp=parseFloat(document.getElementById('cd-carrier-price').value)||0;
+  const p=cp-kp;const m=cp?Math.round(p/cp*100):0;
+  const el=document.getElementById('deal-preview');
+  if(cp&&kp)el.innerHTML=`<div style="display:flex;gap:16px;padding:10px;background:var(--s2);border:1px solid var(--b)">
+    <div><div class="form-label">Profit</div><div style="font-family:var(--mono);font-size:18px;color:${p>0?'var(--gn2)':'var(--rd2)'};font-weight:500">€${p.toLocaleString()}</div></div>
+    <div><div class="form-label">Margin</div><div style="font-family:var(--mono);font-size:18px;color:var(--bl2);font-weight:500">${m}%</div></div>
+  </div>`;
+  else el.innerHTML='';
+}
+
+function createDeal(){
+  const loadId=parseInt(document.getElementById('cd-load').value);
+  const carrierId=parseInt(document.getElementById('cd-carrier').value);
+  const cp=parseFloat(document.getElementById('cd-client').value)||0;
+  const kp=parseFloat(document.getElementById('cd-carrier-price').value)||0;
+  if(!cp||!kp){showToast('Enter prices');return;}
+  const profit=cp-kp;
+  const id=++nextId.deal;
+  DB.deals.unshift({id,load_id:loadId,carrier_id:carrierId,client_price:cp,carrier_price:kp,profit});
+  saveDB();closeModal('modal-create-deal');renderDealsTable();updateTopbarStats();
+  showToast(`Deal created — Profit: €${profit.toLocaleString()}`);
+  nav('dashboard',document.querySelector('.nav-item'));
+}
+
+function renderDealsTable(){
+  const tbody=document.getElementById('deals-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=DB.deals.length?DB.deals.map(d=>{
+    const load=DB.loads.find(l=>l.id===d.load_id)||{from_country:'?',to_country:'?'};
+    const carrier=DB.carriers.find(c=>c.id===d.carrier_id)||{name:'?'};
+    const margin=d.client_price?Math.round(d.profit/d.client_price*100):0;
+    return `<tr>
+      <td><span class="tag">#${d.id}</span></td>
+      <td><b>${load.from_country} → ${load.to_country}</b></td>
+      <td>${carrier.name}</td>
+      <td>€${d.client_price.toLocaleString()}</td>
+      <td>€${d.carrier_price.toLocaleString()}</td>
+      <td><b style="color:var(--gn2)">€${d.profit.toLocaleString()}</b></td>
+      <td><span class="badge ${margin>=20?'badge-green':margin>=10?'badge-blue':'badge-amber'}">${margin}%</span></td>
+      <td><button class="btn btn-sm btn-red" onclick="deleteDeal(${d.id})">✕</button></td>
+    </tr>`;
+  }).join(''):'<tr class="empty-row"><td colspan="8">No deals yet — create one</td></tr>';
+}
+
+function deleteDeal(id){DB.deals=DB.deals.filter(d=>d.id!==id);saveDB();renderDealsTable();updateTopbarStats();showToast('Deal removed');}
+
+// ════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════
+function renderDashboard(){
+  const totalProfit=DB.deals.reduce((s,d)=>s+d.profit,0);
+  const avgMargin=DB.deals.length?Math.round(DB.deals.reduce((s,d)=>s+(d.profit/d.client_price*100),0)/DB.deals.length):0;
+  const bestDeal=DB.deals.reduce((best,d)=>d.profit>best.profit?d:best,{profit:-1});
+  const bestLoad=bestDeal.load_id?DB.loads.find(l=>l.id===bestDeal.load_id):null;
+
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="card"><div class="card-title">Active Loads</div><div class="card-val blue">${DB.loads.length}</div><div class="card-sub">In marketplace</div></div>
+    <div class="card"><div class="card-title">Carriers</div><div class="card-val">${DB.carriers.length}</div><div class="card-sub">Available</div></div>
+    <div class="card"><div class="card-title">Total Deals</div><div class="card-val amber">${DB.deals.length}</div><div class="card-sub">Closed</div></div>
+    <div class="card"><div class="card-title">Total Profit</div><div class="card-val green">€${totalProfit.toLocaleString()}</div><div class="card-sub">All deals combined</div></div>`;
+
+  document.getElementById('dash-total-profit').textContent='€'+totalProfit.toLocaleString();
+  document.getElementById('dash-avg-margin').textContent=avgMargin+'%';
+  document.getElementById('dash-best-route').textContent=bestLoad?`${bestLoad.from_country} → ${bestLoad.to_country}`:'—';
+
+  const dealsBody=document.getElementById('dash-deals');
+  if(dealsBody)dealsBody.innerHTML=DB.deals.slice(0,5).map(d=>{
+    const load=DB.loads.find(l=>l.id===d.load_id)||{from_country:'?',to_country:'?',transport_type:'?'};
+    const carrier=DB.carriers.find(c=>c.id===d.carrier_id)||{name:'?'};
+    return `<tr>
+      <td><b>${load.from_country} → ${load.to_country}</b></td>
+      <td>€${d.client_price.toLocaleString()}</td>
+      <td>${carrier.name}</td>
+      <td><b style="color:var(--gn2)">€${d.profit.toLocaleString()}</b></td>
+      <td><span class="badge ${typeBadge(load.transport_type)}">${load.transport_type}</span></td>
+    </tr>`;
+  }).join('')||'<tr class="empty-row"><td colspan="5">No deals yet</td></tr>';
+
+  const loadsBody=document.getElementById('dash-loads');
+  if(loadsBody)loadsBody.innerHTML=[...DB.loads].sort((a,b)=>b.price-a.price).slice(0,5).map(l=>`
+    <tr>
+      <td><b>${l.from_country}</b></td><td><b>${l.to_country}</b></td>
+      <td><span class="badge ${typeBadge(l.transport_type)}">${l.transport_type}</span></td>
+      <td><b>€${l.price.toLocaleString()}</b></td>
+    </tr>`).join('')||'<tr class="empty-row"><td colspan="4">No loads</td></tr>';
+}
+
+// ════════════════════════════════════════════════════════
+// BROKER TOOLS
+// ════════════════════════════════════════════════════════
+function renderBroker(){
+  const tbody=document.getElementById('broker-deals-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=DB.deals.map(d=>{
+    const load=DB.loads.find(l=>l.id===d.load_id)||{from_country:'?',to_country:'?',transport_type:'?'};
+    const margin=d.client_price?Math.round(d.profit/d.client_price*100):0;
+    return `<tr>
+      <td><span class="tag">#${d.id}</span></td>
+      <td><b>${load.from_country} → ${load.to_country}</b></td>
+      <td><span class="badge ${typeBadge(load.transport_type)}">${load.transport_type}</span></td>
+      <td>€${d.client_price.toLocaleString()}</td>
+      <td>€${d.carrier_price.toLocaleString()}</td>
+      <td><b style="color:var(--gn2)">€${d.profit.toLocaleString()}</b></td>
+      <td>${margin}%</td>
+      <td><span class="badge badge-green">closed</span></td>
+    </tr>`;
+  }).join('')||'<tr class="empty-row"><td colspan="8">No deals</td></tr>';
+}
+
+function calcBroker(){
+  const cp=parseFloat(document.getElementById('bc-client').value)||0;
+  const kp=parseFloat(document.getElementById('bc-carrier').value)||0;
+  if(!cp||!kp)return;
+  const p=cp-kp;const m=Math.round(p/cp*100);
+  document.getElementById('broker-result').innerHTML=`
+    <div style="background:var(--s2);border:1px solid var(--b);padding:12px">
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">CLIENT PAYS</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--tx)">€${cp.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">CARRIER GETS</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--tx)">€${kp.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0 0">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">YOUR PROFIT</span>
+        <span style="font-family:var(--mono);font-size:16px;color:${p>0?'var(--gn2)':'var(--rd2)'};font-weight:500">€${p.toLocaleString()} (${m}%)</span>
+      </div>
+    </div>`;
+}
+
+function calcComm(){
+  const deal=parseFloat(document.getElementById('comm-deal').value)||0;
+  const pct=parseFloat(document.getElementById('comm-pct').value)||0;
+  if(!deal||!pct)return;
+  const comm=deal*pct/100;
+  document.getElementById('comm-result').innerHTML=`
+    <div style="background:var(--s2);border:1px solid var(--b);padding:12px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--tx2);margin-bottom:4px">COMMISSION</div>
+      <div style="font-family:var(--mono);font-size:22px;color:var(--bl2);font-weight:500">€${comm.toLocaleString('en',{maximumFractionDigits:0})}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:4px">€${deal.toLocaleString()} × ${pct}%</div>
+    </div>`;
+}
+
+function calcRoute(){
+  const km=parseFloat(document.getElementById('route-km').value)||0;
+  const rate=parseFloat(document.getElementById('route-rate').value)||0;
+  const weight=parseFloat(document.getElementById('route-weight').value)||0;
+  if(!km||!rate)return;
+  const cost=km*rate;const perTon=weight?cost/weight:0;
+  document.getElementById('route-result').innerHTML=`
+    <div style="background:var(--s2);border:1px solid var(--b);padding:12px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--tx2);margin-bottom:4px">ESTIMATED COST</div>
+      <div style="font-family:var(--mono);font-size:22px;color:var(--am2);font-weight:500">€${cost.toLocaleString('en',{maximumFractionDigits:0})}</div>
+      ${perTon?`<div style="font-family:var(--mono);font-size:10px;color:var(--tx3);margin-top:4px">€${perTon.toFixed(2)}/tonne</div>`:''}
+      <div style="font-family:var(--mono);font-size:10px;color:var(--tx3)">${km}km × €${rate}/km</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// PRICE AI
+// ════════════════════════════════════════════════════════
+function calcPriceCompare(){
+  const cp=parseFloat(document.getElementById('pc-client').value)||0;
+  const kp=parseFloat(document.getElementById('pc-carrier').value)||0;
+  if(!cp||!kp)return;
+  const profit=cp-kp;
+  const margin=Math.round(profit/cp*100);
+  const type=document.getElementById('pc-type').value;
+  const avgRates={truck:1200,ship:3500,plane:6000,train:2500};
+  const avg=avgRates[type]||1500;
+  const vsMarket=Math.round((cp-avg)/avg*100);
+  const verdict=vsMarket<=-15?'cheap':vsMarket>=20?'expensive':'normal';
+  const meterPct=Math.min(100,Math.max(0,((cp-avg*0.5)/(avg*1.5-avg*0.5))*100));
+
+  document.getElementById('price-result').innerHTML=`
+    <div class="card-title">Analysis</div>
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">CLIENT PRICE</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--tx)">€${cp.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">CARRIER PRICE</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--tx)">€${kp.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">PROFIT</span>
+        <span style="font-family:var(--mono);font-size:13px;color:${profit>0?'var(--gn2)':'var(--rd2)'};font-weight:500">€${profit.toLocaleString()} (${margin}%)</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--b)">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">AVG MARKET (${type})</span>
+        <span style="font-family:var(--mono);font-size:12px;color:var(--tx2)">~€${avg.toLocaleString()}</span>
+      </div>
+      <div style="padding:6px 0">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--tx2)">VS MARKET</span>
+        <div class="price-meter"><div class="price-meter-fill ${verdict}" style="width:${meterPct}%"></div></div>
+      </div>
+    </div>
+    <span class="verdict ${verdict}">${verdict.toUpperCase()}</span>
+    ${margin>=20?'<div style="font-size:12px;color:var(--gn2);margin-top:8px">Good margin — proceed with deal</div>':
+      margin>=10?'<div style="font-size:12px;color:var(--am2);margin-top:8px">Acceptable margin — check market rate</div>':
+      '<div style="font-size:12px;color:var(--rd2);margin-top:8px">Low margin — negotiate carrier price down</div>'}`;
+}
+
+async function aiPriceAnalysis(){
+  const cp=document.getElementById('pc-client').value;
+  const kp=document.getElementById('pc-carrier').value;
+  const route=document.getElementById('pc-route').value||'unknown route';
+  const type=document.getElementById('pc-type').value;
+  if(!cp||!kp){showToast('Enter client and carrier prices first');return;}
+  const el=document.getElementById('ai-price-result');
+  el.innerHTML=`<div class="card" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:8px;color:var(--tx2);font-family:var(--mono);font-size:11px"><div class="spinner"></div> AI ANALYSING...</div></div>`;
+  try{
+    const text=await gemini(`You are a freight broker expert. Analyse this deal:
+Route: ${route}, Transport: ${type}
+Client price: €${cp}, Carrier price: €${kp}, Profit: €${parseFloat(cp)-parseFloat(kp)}
+
+Give brief analysis (5-7 lines):
+1. Is this a good deal?
+2. Market rate assessment for this route/type
+3. Negotiation tips to improve profit
+4. Risk factors
+Reply in plain text, no markdown headers.`);
+    el.innerHTML=`<div class="card" style="margin-bottom:16px">
+      <div class="card-title" style="margin-bottom:10px">AI ANALYSIS</div>
+      <div style="font-size:13px;color:var(--tx2);line-height:1.7">${text.replace(/\n/g,'<br>')}</div>
+    </div>`;
+  }catch(e){el.innerHTML=`<div class="card" style="margin-bottom:16px"><div style="color:var(--rd2);font-family:var(--mono);font-size:11px">AI error — check API key</div></div>`;}
+}
+
+// ════════════════════════════════════════════════════════
+// AI AGENT CHAT
+// ════════════════════════════════════════════════════════
+function sendSug(el){document.getElementById('chat-input').value=el.textContent;sendChat();}
+
+async function sendChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  appendMsg(msg,'user');
+  const btn=document.getElementById('chat-send-btn');
+  btn.disabled=true;btn.textContent='...';
+
+  try{
+    const loadsCtx=DB.loads.slice(0,8).map(l=>`Load#${l.id}: ${l.from_country}→${l.to_country} €${l.price} ${l.transport_type} ${(l.weight/1000).toFixed(0)}t`).join('\n');
+    const carriersCtx=DB.carriers.slice(0,8).map(c=>`Carrier#${c.id}: ${c.name} ${c.country} ${c.transport_type} €${c.price_per_km}/km`).join('\n');
+    const dealsCtx=DB.deals.slice(0,4).map(d=>`Deal#${d.id}: client€${d.client_price} carrier€${d.carrier_price} profit€${d.profit}`).join('\n');
+
+    const prompt=`You are GlobalFreight AI — logistics broker assistant.
+
+Platform data:
+LOADS:
+${loadsCtx}
+
+CARRIERS:
+${carriersCtx}
+
+RECENT DEALS:
+${dealsCtx}
+
+User message: "${msg}"
+
+Rules:
+- Be concise and practical (max 150 words)
+- Use platform data when relevant (reference Load# or Carrier# IDs)
+- For profit calculations: show client price, carrier price, profit, margin %
+- For routes: suggest transport type, transit time, key documents
+- For documents: list required docs for the transport type
+- Format numbers clearly (€1,400 not 1400)
+- If asking about loads/carriers, reference specific ones from the list`;
+
+    const reply=await gemini(prompt);
+    appendMsg(reply,'ai');
+  }catch(e){
+    appendMsg('AI error — check your API key in settings.','ai');
+  }
+  btn.disabled=false;btn.textContent='SEND';
+  document.getElementById('chat-msgs').scrollTop=9999;
+}
+
+function appendMsg(text,role){
+  const msgs=document.getElementById('chat-msgs');
+  const el=document.createElement('div');
+  el.className='chat-msg '+role;
+  if(role==='ai'){
+    el.innerHTML=`<div class="ai-label">GFAI</div>${text.replace(/\n/g,'<br>')}`;
+  }else{
+    el.textContent=text;
+  }
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+// ════════════════════════════════════════════════════════
+// AI SEARCH
+// ════════════════════════════════════════════════════════
+function quickSearch(q){document.getElementById('search-input').value=q;aiSearch();}
+
+async function aiSearch(){
+  const q=document.getElementById('search-input').value.trim();
+  if(!q)return;
+  const el=document.getElementById('search-results');
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;color:var(--tx2);font-family:var(--mono);font-size:11px;padding:20px 0"><div class="spinner"></div> SEARCHING...</div>`;
+
+  // Local search first
+  const localResults=[];
+  const ql=q.toLowerCase();
+
+  // Search loads
+  DB.loads.filter(l=>l.from_country.toLowerCase().includes(ql)||l.to_country.toLowerCase().includes(ql)||l.transport_type.includes(ql)).forEach(l=>{
+    localResults.push({type:'LOAD',title:`${l.from_country} → ${l.to_country}`,sub:`${l.transport_type} · €${l.price.toLocaleString()} · ${(l.weight/1000).toFixed(0)}t · ${l.date}`,id:l.id});
+  });
+
+  // Search carriers
+  DB.carriers.filter(c=>c.name.toLowerCase().includes(ql)||c.country.toLowerCase().includes(ql)||c.transport_type.includes(ql)).forEach(c=>{
+    localResults.push({type:'CARRIER',title:`${c.name}`,sub:`${c.country} · ${c.transport_type} · €${c.price_per_km}/km`,id:c.id});
+  });
+
+  // Search terms
+  TERMS.filter(t=>t.word.toLowerCase().includes(ql)||t.meaning.toLowerCase().includes(ql)).forEach(t=>{
+    localResults.push({type:'TERM',title:t.word,sub:t.meaning.slice(0,100)+'...',id:null});
+  });
+
+  // Search lessons
+  LESSONS.filter(l=>l.title.toLowerCase().includes(ql)||l.text.toLowerCase().includes(ql)).forEach(l=>{
+    localResults.push({type:'LESSON',title:l.title,sub:l.text.slice(0,100)+'...',id:l.id});
+  });
+
+  // AI answer
+  try{
+    const ctx=`Loads: ${DB.loads.map(l=>`${l.from_country}→${l.to_country} €${l.price} ${l.transport_type}`).join('; ')}
+Carriers: ${DB.carriers.map(c=>`${c.name} ${c.transport_type} €${c.price_per_km}/km`).join('; ')}`;
+    const aiAnswer=await gemini(`You are a logistics AI. Answer this search query concisely (max 100 words):
+Query: "${q}"
+Platform data: ${ctx}
+Provide a direct, helpful answer. Reference specific loads/carriers if relevant.`);
+
+    el.innerHTML=`
+      <div class="search-result" style="border-color:var(--bl);margin-bottom:16px">
+        <div class="sr-type">AI ANSWER</div>
+        <div class="sr-sub" style="font-size:13px;line-height:1.7">${aiAnswer.replace(/\n/g,'<br>')}</div>
+      </div>
+      ${localResults.length?`<div style="font-family:var(--mono);font-size:9px;color:var(--tx3);letter-spacing:2px;margin-bottom:10px">MATCHING RECORDS (${localResults.length})</div>`:''}
+      ${localResults.map(r=>`
+        <div class="search-result">
+          <div class="sr-type">${r.type}</div>
+          <div class="sr-title">${r.title}</div>
+          <div class="sr-sub">${r.sub}</div>
+        </div>`).join('')}
+      ${!localResults.length?'<div style="font-family:var(--mono);font-size:11px;color:var(--tx3);padding:10px 0">No matching records in database</div>':''}`;
+  }catch(e){
+    el.innerHTML=localResults.length?localResults.map(r=>`
+      <div class="search-result">
+        <div class="sr-type">${r.type}</div>
+        <div class="sr-title">${r.title}</div>
+        <div class="sr-sub">${r.sub}</div>
+      </div>`).join('')
+      :`<div style="color:var(--rd2);font-family:var(--mono);font-size:11px;padding:20px 0">AI error. Showing local results only.</div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// LEARNING
+// ════════════════════════════════════════════════════════
+function renderLearning(){renderLessons();renderTerms('');}
+
+function renderLessons(){
+  const el=document.getElementById('lessons-list');
+  if(!el||el.dataset.rendered)return;
+  el.dataset.rendered='1';
+  el.innerHTML=LESSONS.map(l=>`
+    <div class="lesson-card" id="lc-${l.id}" onclick="toggleLesson(${l.id})">
+      <div class="lesson-head">
+        <div>
+          <div class="lesson-title">${l.title}</div>
+          <span class="badge ${l.level==='beginner'?'badge-green':l.level==='intermediate'?'badge-blue':'badge-amber'}" style="margin-top:4px">${l.level}</span>
+        </div>
+        <span style="font-family:var(--mono);font-size:16px;color:var(--tx3)">+</span>
+      </div>
+      <div class="lesson-body">${l.text}</div>
+    </div>`).join('');
+}
+
+function toggleLesson(id){
+  const el=document.getElementById('lc-'+id);
+  el.classList.toggle('open');
+  el.querySelector('.lesson-head span:last-child').textContent=el.classList.contains('open')?'−':'+';
+}
+
+function renderTerms(filter){
+  const el=document.getElementById('terms-list');
+  if(!el)return;
+  const fl=filter.toLowerCase();
+  const terms=fl?TERMS.filter(t=>t.word.toLowerCase().includes(fl)||t.meaning.toLowerCase().includes(fl)):TERMS;
+  el.innerHTML=`<div style="background:var(--s1);border:1px solid var(--b);padding:0 14px">`+
+    terms.map(t=>`
+      <div class="term-row">
+        <div class="term-word">${t.word}</div>
+        <div><div class="term-def">${t.meaning}</div><div class="term-ex">"${t.example}"</div></div>
+      </div>`).join('')+
+    '</div>';
+}
+
+function renderDocs(){
+  const el=document.getElementById('docs-content');
+  if(!el||el.dataset.rendered)return;
+  el.dataset.rendered='1';
+  const groups={truck:[],ship:[],plane:[],train:[],all:[],norway:[]};
+  DOCS_DATA.forEach(d=>groups[d.transport].push(d));
+  el.innerHTML=Object.entries(groups).filter(([,v])=>v.length).map(([k,docs])=>`
+    <div style="margin-bottom:20px">
+      <div class="section-title" style="margin-bottom:10px">${k.toUpperCase()} TRANSPORT</div>
+      ${docs.map(d=>`
+        <div style="background:var(--s1);border:1px solid var(--b);padding:14px 16px;margin-bottom:8px">
+          <div style="font-weight:500;color:var(--tx);margin-bottom:4px">${d.name}</div>
+          <div style="font-size:13px;color:var(--tx2);line-height:1.6">${d.desc}</div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function renderGuide(){
+  const el=document.getElementById('guide-content');
+  if(!el||el.dataset.rendered)return;
+  el.dataset.rendered='1';
+  el.innerHTML=`
+    <div style="background:var(--s1);border:1px solid var(--b);padding:20px;max-width:700px">
+      <div style="font-family:var(--mono);font-size:10px;color:var(--bl2);letter-spacing:2px;margin-bottom:16px">HOW TO BECOME A FREIGHT BROKER</div>
+      ${[
+        ['Step 1: Learn the basics','Study Incoterms, transport modes, customs procedures. Use the Learning section — start with Lessons, then study Terms. Know the difference between CMR, B/L, AWB.'],
+        ['Step 2: Find your niche','Pick 1-2 trade lanes (e.g. Norway ↔ Poland trucks). Specialise — you will command better rates and build better carrier relationships.'],
+        ['Step 3: Build carrier network','Contact trucking companies directly. Get rate sheets. Use the Carriers section to track your network. Start with 5-10 reliable carriers.'],
+        ['Step 4: Find your first client','Reach out to manufacturers, importers, exporters. LinkedIn is effective for B2B. Offer competitive rates — aim for 10-15% margin initially.'],
+        ['Step 5: Negotiate your first deal','Get client price. Call 3-5 carriers for quotes. Take the best deal. Target: client €1,400 / carrier €1,100 = €300 profit (21% margin).'],
+        ['Step 6: Track and scale','Use the Broker Tools section. Track every deal in the Deals log. Aim for 20+ deals/month. Reinvest margins into relationships and systems.'],
+        ['Key numbers to know','— Average truck rate EU: €1.5-3/km\n— Average margin: 15-25%\n— Average LTL: 10-15% more expensive per kg than FTL\n— Payment terms: clients pay 30-60 days, carriers want 7-15 days'],
+      ].map(([title,text])=>`
+        <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--b)">
+          <div style="font-weight:600;color:var(--tx);margin-bottom:6px">${title}</div>
+          <div style="font-size:13px;color:var(--tx2);line-height:1.7;white-space:pre-line">${text}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+function typeBadge(t){return{truck:'badge-blue',ship:'badge-green',plane:'badge-amber',train:'badge-gray'}[t]||'badge-gray';}
+
+function updateTopbarStats(){
+  const totalProfit=DB.deals.reduce((s,d)=>s+d.profit,0);
+  document.getElementById('stat-loads').textContent=DB.loads.length;
+  document.getElementById('stat-carriers').textContent=DB.carriers.length;
+  document.getElementById('stat-deals').textContent=DB.deals.length;
+  document.getElementById('stat-profit').textContent='€'+totalProfit.toLocaleString();
+}
+
+function renderMarketplace(){renderLoads();renderCarriers();renderDealsTable();}
+
+let _toastTimer;
+function showToast(msg){
+  let t=document.getElementById('_toast');
+  if(!t){t=document.createElement('div');t.id='_toast';
+    t.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--s3);border:1px solid var(--b2);color:var(--tx);font-family:var(--mono);font-size:11px;letter-spacing:1px;padding:10px 16px;z-index:999;transition:opacity .3s';
+    document.body.appendChild(t);}
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{t.style.opacity='0';},2500);
+}
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+function initApp(){
+  updateTopbarStats();
+  renderDashboard();
+  appendMsg('Hello. I am GlobalFreight AI.\n\nI can help you:\n— Find loads and carriers\n— Calculate profit and margins\n— Suggest optimal routes\n— Identify required documents\n\nTry one of the suggestions above, or type your question.','ai');
+}
+
+loadDB();
+
+if(DB.geminiKey&&DB.geminiKey.length>20){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('main-app').style.display='flex';
+  initApp();
+}else{
+  document.getElementById('setup-screen').style.display='flex';
+}
+</script>
+</body>
+</html>
+
